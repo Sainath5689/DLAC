@@ -1,0 +1,210 @@
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>VisionPort - Indian Traffic Analyzer</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f4f8;
+            margin: 0;
+            padding: 25px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+        }
+
+        h1 {
+            color: #183b70;
+            text-align: center;
+        }
+
+        .metrics {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 25px 0;
+        }
+
+        .card {
+            flex: 1;
+            min-width: 180px;
+            background: #eaf1ff;
+            padding: 18px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .upload {
+            padding: 25px;
+            background: #f5f7fa;
+            border: 2px dashed #4b75bd;
+            text-align: center;
+            border-radius: 10px;
+        }
+
+        img {
+            max-width: 100%;
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-top: 15px;
+            background: #183b70;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #status {
+            margin-top: 15px;
+            color: #183b70;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>VisionPort Live Portal</h1>
+
+    <h3 style="text-align:center;">
+        Indian Traffic Analyzer
+    </h3>
+
+    <div class="metrics">
+
+        <div class="card">
+            <strong>System Status</strong>
+            <p>Active</p>
+        </div>
+
+        <div class="card">
+            <strong>Model Architecture</strong>
+            <p>YOLOv8 Nano</p>
+        </div>
+
+        <div class="card">
+            <strong>Inference Hardware</strong>
+            <p>CPU</p>
+        </div>
+
+    </div>
+
+    <div class="upload">
+
+        <h3>Upload Traffic Image</h3>
+
+        <input
+            type="file"
+            id="traffic-uploader"
+            accept="image/*"
+            onchange="processImage(event)"
+        >
+
+        <p id="status">Waiting for image...</p>
+
+    </div>
+
+    <h3>Object Detection Output</h3>
+
+    <img
+        id="output-preview"
+        alt="Detection output will appear here"
+        style="display:none;"
+    >
+
+</div>
+
+<script>
+
+async function processImage(event) {
+
+    const file = event.target.files[0];
+
+    if (!file) return;
+
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    const outputImg = document.getElementById("output-preview");
+    const status = document.getElementById("status");
+
+    status.innerText = "Processing image...";
+    outputImg.style.opacity = "0.5";
+
+    try {
+
+        const response = await fetch(
+            "http://127.0.0.1:8000/detect/",
+            {
+                method: "POST",
+                body: formData
+            }
+        );
+
+        console.log("Response status:", response.status);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText);
+        }
+
+        const blob = await response.blob();
+
+        if (!blob.type.startsWith("image/")) {
+            throw new Error("Backend did not return an image.");
+        }
+
+        if (outputImg.dataset.objectUrl) {
+            URL.revokeObjectURL(outputImg.dataset.objectUrl);
+        }
+
+        const imageURL = URL.createObjectURL(blob);
+
+        outputImg.src = imageURL;
+        outputImg.dataset.objectUrl = imageURL;
+        outputImg.style.display = "block";
+        outputImg.style.opacity = "1";
+
+        status.innerText = "Detection completed successfully!";
+
+        console.log("Detection successful!");
+
+    }
+    catch (error) {
+
+        console.error("VisionPort error:", error);
+
+        status.innerText = "Detection failed: " + error.message;
+
+        alert("Backend error: " + error.message);
+
+    }
+    finally {
+
+        outputImg.style.opacity = "1";
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>
